@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pub/Sub Example</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
+  </style>
+</head>
+<body>
+
+  <h1>Pub/Sub Example in JavaScript</h1>
+  <button id="publish-btn">Publish User Signup Event</button>
+
+  <h2>Console Output:</h2>
+  <pre id="output"></pre>
+
+  <script>
+    // Utility to print to on-page console
+    const outputEl = document.getElementById('output');
+    function log(...args) {
+      console.log(...args);
+      outputEl.textContent += args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : a).join(' ') + '\n';
+    }
+
+    // PubSub class
+    class PubSub {
+      constructor() {
+        this.subscribers = {};
+      }
+
+      subscribe(event, handler) {
+        if (!this.subscribers[event]) {
+          this.subscribers[event] = [];
+        }
+        this.subscribers[event].push(handler);
+        log(`Subscribed to event: '${event}'`);
+      }
+
+      unsubscribe(event, handler) {
+        if (!this.subscribers[event]) return;
+
+        this.subscribers[event] = this.subscribers[event].filter(h => h !== handler);
+        log(`Unsubscribed from event: '${event}'`);
+      }
+
+      publish(event, data) {
+        log(`Publishing event: '${event}' with data:`, data);
+        if (!this.subscribers[event]) return;
+
+        this.subscribers[event].forEach(handler => handler(data));
+      }
+    }
+
+    // Create PubSub instance
+    const pubsub = new PubSub();
+
+    // Subscriber functions
+    function emailService(data) {
+      log(`[Email Service] Sending email to: ${data.to}, Subject: "${data.subject}"`);
+    }
+
+    function loggingService(data) {
+      log(`[Logging Service] Event '${data.event}' occurred with data:`, data);
+    }
+
+    function analyticsService(data) {
+      log(`[Analytics Service] Tracking event: ${data.event}`);
+    }
+
+    // Subscribe to "user_signup"
+    pubsub.subscribe("user_signup", emailService);
+    pubsub.subscribe("user_signup", loggingService);
+    pubsub.subscribe("user_signup", analyticsService);
+
+    // Unsubscribe analytics service after 1st event
+    let unsubscribed = false;
+
+    // Button click to publish event
+    document.getElementById('publish-btn').addEventListener('click', () => {
+      if (!unsubscribed) {
+        pubsub.publish("user_signup", {
+          event: "user_signup",
+          to: "user@example.com",
+          subject: "Welcome!",
+          userId: 101,
+        });
+
+        pubsub.unsubscribe("user_signup", analyticsService);
+        unsubscribed = true;
+      } else {
+        pubsub.publish("user_signup", {
+          event: "user_signup",
+          to: "seconduser@example.com",
+          subject: "Thanks for signing up!",
+          userId: 102,
+        });
+      }
+    });
+  </script>
+
+</body>
+</html>
